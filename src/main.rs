@@ -58,6 +58,10 @@ fn main() {
     let ui = AppWindow::new().expect("Failed to load UI");
     let ui_handle = ui.as_weak();
 
+    ui.on_slider_changed(|value| {
+        log::info!("slider changed to {}", value);
+    });
+
     let timer = slint::Timer::default();
     timer.start(
         slint::TimerMode::Repeated,
@@ -69,11 +73,13 @@ fn main() {
             match sensor_rx.recv_timeout(Duration::from_millis(10)) {
                 Ok(data) => {
                     let when = data.when.as_secs().to_string();
-                    model.set_current(WeatherRecord {
+                    let record = WeatherRecord {
                         temperature_celsius: data.temperature_celsius,
                         humidity_percent: data.humidity_percent,
                         timestamp: slint::SharedString::from(when),
-                    });
+                    };
+
+                    model.set_current(record.clone());
                 }
                 Err(e) => {
                     log::error!("Receiving sensor data failed: {:?}", e);

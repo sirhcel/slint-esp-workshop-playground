@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, TabWidget, Slider } from "std-widgets.slint";
 import { Indicator, TitleBar, StatusBar, AppStyleMetrics } from "widgets.slint";
 
 // @rust-attr(derive(Debug))
@@ -32,7 +32,7 @@ component HumidityBar inherits Indicator {
 
 export component AppWindow inherits Window {
     in-out property<int> counter: 42;
-    callback request-increase-value();
+    callback slider-changed(float);
 
     width: 320px;
     height: 240px;
@@ -41,15 +41,31 @@ export component AppWindow inherits Window {
         TitleBar {
             text: "Slint Weather Station";
         }
-        Rectangle {
-            background: #ffffff;
+        TabWidget {
+            Tab {
+                Rectangle {
+                    background: #ffffff;
 
-            HorizontalBox {
-                TemperatureBar {
-                    value: ViewModel.current.temperature-celsius;
+                    HorizontalBox {
+                        TemperatureBar {
+                            value: ViewModel.current.temperature-celsius;
+                        }
+                        HumidityBar {
+                            value: ViewModel.current.humidity-percent;
+                        }
+                    }
                 }
-                HumidityBar {
-                    value: ViewModel.current.humidity-percent;
+            }
+            // Looks like the current styling of the tab layout supports only two tabs.
+            // Tab {
+            //     Text {
+            //         text: "foo";
+            //     }
+            // }
+            Tab {
+                Slider {
+                    width: 200px;
+                    changed => { root.slider-changed(self.value); }
                 }
             }
         }
