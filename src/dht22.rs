@@ -1,3 +1,4 @@
+use esp_idf_svc::hal::interrupt::IsrCriticalSection;
 
 pub struct DHT22 {
     pin: i32,
@@ -41,6 +42,9 @@ impl DHT22 {
         let mut bit_inx = 7;
 
         unsafe {
+            // Silencium. We are going to do some timing-critical GPIO wiggling below.
+            let cs = IsrCriticalSection::new();
+            let _guard = cs.enter();
 
             gpio_set_direction(self.pin, GPIO_MODE_DEF_OUTPUT);
 
