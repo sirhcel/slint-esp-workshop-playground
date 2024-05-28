@@ -52,6 +52,10 @@ export component Indicator {
     // Ensure displayed level stays within min and max.
     out property <float> level: (Math.clamp(self.value, self.min-value, self.max-value) - self.min-value) / (self.max-value - self.min-value);
     
+    animate level {
+        duration: 1000ms;
+    }
+
     // Right now, fill and bar are on top of each other. But they could also be nested.
 
     fill := Rectangle {
