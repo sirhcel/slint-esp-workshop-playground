@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 mod dht22;
@@ -6,13 +6,50 @@ mod esp32;
 
 slint::include_modules!();
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct SensorData {
     temperature_celsius: f32,
     humidity_percent: f32,
     when: Duration,
 }
 
-fn dht_task(tx: mpsc::Sender<SensorData>) {
+/// Convenience helper for passing the last of a value between threads. For example from a thread
+/// interfacing with a sensor to another one processing the data.
+#[derive(Clone)]
+struct Last<T> {
+    inner: Arc<Mutex<Option<T>>>,
+}
+
+impl<T: Clone> Last<T> {
+    /// Creates a new empty helper.
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(None)),
+        }
+    }
+
+    /// Sets `value` as the last value.
+    ///
+    /// # Panics
+    ///
+    /// If the locking the interally used mutex fails.
+    fn set(&self, value: T) {
+        let mut data = self.inner.lock().unwrap();
+        let _ = data.insert(value);
+    }
+
+    /// Gets the last value.
+    ///
+    /// # Panics
+    ///
+    /// If the locking the interally used mutex fails.
+    fn get(&self) -> Option<T> {
+        let mut data = self.inner.lock().unwrap();
+        data.take()
+    }
+}
+
+fn dht_task(last: Last<SensorData>) {
     let start = Instant::now();
     let dht = dht22::DHT22::new(13);
 
@@ -25,9 +62,8 @@ fn dht_task(tx: mpsc::Sender<SensorData>) {
                     humidity_percent: humidity,
                     when: Instant::now().duration_since(start),
                 };
-                tx.send(data).unwrap_or_else(|e| {
-                    log::error!("Sending sensor data failed: {:?}", e);
-                });
+
+                last.set(data);
             }
             Err(e) => {
                 log::error!("Error reading DHT22: {:?}", e);
@@ -49,8 +85,9 @@ fn main() {
     // Set the platform
     slint::platform::set_platform(esp32::EspPlatform::new()).unwrap();
 
-    let (sensor_tx, sensor_rx) = mpsc::channel::<SensorData>();
-    std::thread::spawn(move || dht_task(sensor_tx));
+    let last_sensor_data = Last::<SensorData>::new();
+    let last_for_dht_task = last_sensor_data.clone();
+    std::thread::spawn(move || dht_task(last_for_dht_task));
 
     // Finally, run the app!
     let ui = AppWindow::new().expect("Failed to load UI");
@@ -67,22 +104,16 @@ fn main() {
         move || {
             let ui = ui_handle.unwrap();
             let model = ViewModel::get(&ui);
-            // Fetch quick or fail.
-            match sensor_rx.recv_timeout(Duration::from_millis(10)) {
-                Ok(data) => {
-                    let when = data.when.as_secs().to_string();
-                    let record = WeatherRecord {
-                        temperature_celsius: data.temperature_celsius,
-                        humidity_percent: data.humidity_percent,
-                        timestamp: slint::SharedString::from(when),
-                    };
+            last_sensor_data.get().map(|data| {
+                let when = data.when.as_secs().to_string();
+                let record = WeatherRecord {
+                    temperature_celsius: data.temperature_celsius,
+                    humidity_percent: data.humidity_percent,
+                    timestamp: slint::SharedString::from(when),
+                };
 
-                    model.set_current(record.clone());
-                }
-                Err(e) => {
-                    log::error!("Receiving sensor data failed: {:?}", e);
-                }
-            }
+                model.set_current(record.clone());
+            });
         },
     );
 
