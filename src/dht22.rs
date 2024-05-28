@@ -1,6 +1,6 @@
 
 pub struct DHT22 {
-    pin: i32
+    pin: i32,
 }
 
 #[derive(Debug)]
@@ -13,9 +13,7 @@ impl DHT22 {
     const MAX_DHT_DATA: usize = 5;
 
     pub fn new(pin: i32) -> Self {
-        Self {
-            pin
-        }
+        Self { pin }
     }
 
     pub fn get_signal_level(&self, max_wait: i32, state: i32) -> i32 {
@@ -105,7 +103,6 @@ impl DHT22 {
                     bit_inx -= 1;
                 }
             }
-
         }
 
         // == get humidity from Data[0] and Data[1] ==========================
