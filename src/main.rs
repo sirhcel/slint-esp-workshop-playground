@@ -1,3 +1,4 @@
+use esp_idf_svc::hal::delay::Delay;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -13,7 +14,7 @@ struct SensorData {
 }
 
 fn dht_task(tx: mpsc::Sender<SensorData>) {
-    // let delay = Delay::new_default();
+    let delay = Delay::new_default();
     let start = Instant::now();
     let dht = dht22::DHT22::new(13);
 
@@ -35,9 +36,7 @@ fn dht_task(tx: mpsc::Sender<SensorData>) {
             }
         }
 
-        unsafe {
-            esp_idf_svc::sys::vTaskDelay(2000 / 10);
-        }
+        delay.delay_ms(200);
     }
 }
 
@@ -66,6 +65,7 @@ fn main() {
         move || {
             let ui = ui_handle.unwrap();
             let model = ViewModel::get(&ui);
+            // Fetch quick or fail.
             match sensor_rx.recv_timeout(Duration::from_millis(10)) {
                 Ok(data) => {
                     let when = data.when.as_secs().to_string();
