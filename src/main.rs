@@ -1,4 +1,3 @@
-use esp_idf_svc::hal::delay::Delay;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -14,7 +13,6 @@ struct SensorData {
 }
 
 fn dht_task(tx: mpsc::Sender<SensorData>) {
-    let delay = Delay::new_default();
     let start = Instant::now();
     let dht = dht22::DHT22::new(13);
 
@@ -36,7 +34,7 @@ fn dht_task(tx: mpsc::Sender<SensorData>) {
             }
         }
 
-        delay.delay_ms(200);
+        std::thread::sleep(Duration::from_millis(200));
     }
 }
 
