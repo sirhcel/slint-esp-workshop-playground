@@ -104,7 +104,7 @@ fn main() {
         move || {
             let ui = ui_handle.unwrap();
             let model = ViewModel::get(&ui);
-            last_sensor_data.get().map(|data| {
+            if let Some(data) = last_sensor_data.get() {
                 let when = data.when.as_secs().to_string();
                 let record = WeatherRecord {
                     temperature_celsius: data.temperature_celsius,
@@ -113,7 +113,7 @@ fn main() {
                 };
 
                 model.set_current(record.clone());
-            });
+            }
         },
     );
 
