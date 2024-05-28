@@ -70,7 +70,7 @@ fn dht_task(last: Last<SensorData>) {
             }
         }
 
-        std::thread::sleep(Duration::from_millis(200));
+        std::thread::sleep(Duration::from_millis(2000));
     }
 }
 
